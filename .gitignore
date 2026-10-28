@@ -1,0 +1,46 @@
+# Large local assets (GitHub rejects files over 100MB)
+*.spp
+**/press/trailers/*.mp4
+**/press/images/images.zip
+**/press/images/logo.zip
+**/share/assets/raiderworkshop/gun_raiders_level_template.zip
+static_site/press/error_log
+static_site/press/images/error_log
+
+/images/source/discord.psd
+/images/source/reviews.psd
+/press/images/images.zip
+/press/images/logo.zip
+/press/trailers/beta_release_trailer.mp4
+/_backup/
+api/dev/*/.idea/
+api/dev/*/out/
+api/dev/*/vendor/
+api/*/.idea/
+api/*/vendor/
+.vs/
+api/gofiber/misc/kafka-persistence/
+gunraiders.com/
+api/vernemq/misc/vernemq/data/
+api/vernemq/misc/vernemq/log/log/
+api/gofiber/misc/vernemq/
+api/gofiber/misc/vernemq2/
+/share/assets/.images.zip
+/share/.htaccess
+api/gofiber/tmp/
+gofiber.code-workspace
+/Push Duck Admin.bat.lnk
+/Push Duck SV.bat.lnk
+/Push GRC Admin.bat.lnk
+/Push GRC SV.bat.lnk
+admin/misc/passwd
+
+# Local secrets. Examples are committed.
+/runtime.env
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.development
+!**/.env.production.example
+api/gofiber/cmd/tencent/tcr/sv/sharedEnv.bat
+api/gofiber/cmd/tencent/tcr/hk/sharedEnv.bat

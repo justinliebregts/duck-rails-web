@@ -1,0 +1,4 @@
+AuthType Basic
+AuthName "Enter the login details"
+AuthUserFile "/home/.htpasswds/tencent_global.gunraidersapi.com/admin/passwd"
+require valid-user

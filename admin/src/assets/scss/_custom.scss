@@ -1,0 +1,15 @@
+// Here you can add other styles
+
+// Classic sidebar brand tint
+.c-sidebar.c-sidebar-dark.sidebar-classic {
+  background: #394331;
+
+  .c-sidebar-brand {
+    background: rgba(0, 0, 0, 0.25);
+  }
+
+  .c-sidebar-nav-link:hover,
+  .c-sidebar-nav-dropdown-toggle:hover {
+    background: #248f4d;
+  }
+}

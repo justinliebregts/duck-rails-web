@@ -1,0 +1,112 @@
+name: gunraiders-classic
+
+networks:
+  grc-net:
+    name: grc-net
+
+volumes:
+  go-mod-cache:
+
+services:
+  ### MySQL as Database
+  db:
+    container_name: grc_database
+    image: "mysql:8"
+    command: --innodb-buffer-pool-size=1G --innodb-log-file-size=256M
+    #platform: linux/amd64
+    restart: unless-stopped
+    ports:
+      - "3307:3306"
+    environment:
+      - MYSQL_ALLOW_EMPTY_PASSWORD=1
+      - MYSQL_ROOT_PASSWORD=local_root_pass
+      - MYSQL_DATABASE=gunraiders_classic
+      - MYSQL_USER=grcuser
+      - MYSQL_PASSWORD=password
+      - TZ=UTC
+    networks:
+      - grc-net
+    volumes:
+      - ../sql/structure_classic.sql:/docker-entrypoint-initdb.d/0_structure_classic.sql:ro
+      - ../sql/types/admin_privileges.sql:/docker-entrypoint-initdb.d/20_admin_privileges.sql:ro
+      - ../sql/types/dev/players.sql:/docker-entrypoint-initdb.d/21_testplayers.sql:ro
+
+  ### Redis Cache
+  cache:
+    container_name: grc_cache
+    image: redis:alpine
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    environment:
+      - TZ=UTC
+    networks:
+      - grc-net
+  #
+
+  ## API
+  gofiber:
+    container_name: grc_backend
+    #image: "golang:1.26-alpine"
+    build:
+      # 物理關鍵：將 Context 設為根目錄，這樣 Docker 就能合法存取 gofiber 資料夾
+      context: .
+      dockerfile: ./Dockerfile.alpine
+    restart: unless-stopped
+    env_file:
+      - .env.development
+    environment:
+      - DEPLOY_ENV=development
+      - TZ=UTC
+      - CGO_ENABLED=1
+    ports:
+      - "8090:3000"
+      - "8098:8080"
+    volumes:
+      #  - ../gofiber:/app
+      - .:/app
+      - go-mod-cache:/go/pkg/mod
+    networks:
+      - grc-net
+    depends_on:
+      - "cache"
+      - "db"
+    working_dir: /app
+    command: air
+  #    command: >
+  #      /bin/sh -c " apk add build-base; cd /app; go run -v main.go; "
+  #      go clean -modcache
+
+  #      apk add libzmq musl-dev pkgconf zeromq-dev build-base;
+  ## Clean the module cache
+  #go clean -modcache
+  ## Ensure all dependencies are properly fetched and updated
+  #go mod tidy
+  ## Recreate the vendor directory
+  #go mod vendor
+  #
+
+  ## PhpMyAdmin
+  adminer:
+    container_name: grc_sqleditor
+    image: adminer
+    restart: unless-stopped
+    ports:
+      - "7778:8080"
+    environment:
+      - TZ=UTC
+      - ADMINER_DEFAULT_SERVER=db
+      #      - ADMINER_DEFAULT_DB_DRIVER: mysql
+      - ADMINER_DESIGN=dracula
+    networks:
+      - grc-net
+    volumes:
+      - ./misc/adminer/one-click-login-master/oneclick-login.php:/var/www/html/plugins/oneclick-login.php
+      - ./misc/adminer/oneclicklogin:/var/www/html/plugins-enabled/oneclicklogin.php
+      #      - ./misc/adminer/uploadlargedumps:/usr/local/etc/php/conf.d/1-upload_large_dumps.ini
+      - ./misc/adminer/uploadlargedumps:/etc/php/7.4/cli/conf.d/0-upload_large_dumps.ini
+    depends_on:
+      - "db"
+    links:
+      - "db:db"
+  #

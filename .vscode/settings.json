@@ -1,0 +1,55 @@
+{
+    "git.ignoreLimitWarning": true,
+    // The number of spaces a tab is equal to.
+    "editor.tabSize": 4,
+
+    // Insert spaces when pressing Tab.
+    "editor.insertSpaces": true,
+
+    // When opening a file, `editor.tabSize` and `editor.insertSpaces` will be detected based on the file contents.
+    "editor.detectIndentation": true,
+    "files.exclude": {
+        "**/api/v1": true,
+        "**/api/v2": true,
+        "**/api/v3": true,
+        "**/api/v4": true,
+        "**/api/v5": true,
+        "**/api/v6": true,
+        "**/api/v7": true,
+        "**/api/v8": true,
+        "**/api/v9": true,
+        "**/api/v10": true,
+        "**/api/v11": true,
+        "**/api/v12": true,
+        "**/api/v13": true,
+        "**/api/v14": true,
+        "**/api/v15": true,
+        "**/api/v16": true,
+		"**/api/v17": true,
+        "**/api/v18": true,
+        "**/api/v19": true,
+        "**/api/v20": true,
+    },
+    "search.exclude": {
+        "**/api/v1": true,
+        "**/api/v2": true,
+        "**/api/v3": true,
+        "**/api/v4": true,
+        "**/api/v5": true,
+        "**/api/v6": true,
+        "**/api/v7": true,
+        "**/api/v8": true,
+        "**/api/v9": true,
+        "**/api/v10": true,
+        "**/api/v11": true,
+        "**/api/v12": true,
+        "**/api/v13": true,
+        "**/api/v14": true,
+        "**/api/v15": true,
+        "**/api/v16": true,
+		"**/api/v17": true,
+        "**/api/v18": true,
+        "**/api/v19": true,
+        "**/api/v20": true,
+    }
+}

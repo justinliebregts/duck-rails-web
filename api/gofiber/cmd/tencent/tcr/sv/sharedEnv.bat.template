@@ -1,0 +1,11 @@
+@echo off
+
+SET tencentBase=
+SET tcrUsername=
+SET tcrNamespace=gr-tcr
+SET tcrPass2=
+SET tcrPass=
+
+SET tcrP=
+
+@echo on

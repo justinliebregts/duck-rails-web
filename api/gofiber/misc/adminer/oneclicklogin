@@ -1,0 +1,26 @@
+<?php
+require_once('plugins/oneclick-login.php');
+
+return new OneClickLogin([
+                      'db' => array(
+                  		// Required parameters
+                          'username'  => 'root',
+                          'pass'      => 'local_root_pass',
+                          // Optional parameters
+                          'label'     => 'MySQL',
+                          'databases' => array(
+                              'duckz' => 'Duckz Database'
+                          )
+                      ),
+                      'db_ro' => array(
+                            // Required parameters
+                            'username'  => 'root',
+                            'pass'      => 'local_root_pass_ro',
+                            'port'      => 32770,
+                            // Optional parameters
+                            'label'     => 'MySQL02',
+                            'databases' => array(
+                                'duckz' => 'Duckz Database 02'
+                            )
+                        ),
+                  ]);

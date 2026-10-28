@@ -1,0 +1,10 @@
+*_test.go
+./vendor
+./cmd
+./docs
+*.bat
+*.proto
+# Never send local credentials to the image builder.
+.env
+.env.*
+runtime.env

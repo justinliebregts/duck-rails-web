@@ -1,0 +1,26 @@
+### Build app in docker
+FROM node:16-alpine AS builder
+
+WORKDIR /src
+COPY . /src
+# Require real deployment settings; never publish an image using the example hostname.
+RUN test -f /src/.env.production || (echo "Create admin/.env.production from .env.production.example and configure the API URLs before building." >&2; exit 1)
+RUN ! grep -q "classic-api.example.com" /src/.env.production || (echo "Replace the example API hostname in admin/.env.production before building." >&2; exit 1)
+
+RUN npm install
+
+# FORCE vue-demi to switch to Vue 2 mode This ensures Pinia works correctly during the 'build' step
+RUN npx vue-demi-switch 2
+
+### build for production with minification
+RUN npm run build
+
+
+### Build image
+FROM httpd:alpine
+RUN apk update && apk add --no-cache --update bash openssl ca-certificates
+
+COPY --from=builder /src/dist /usr/local/apache2/htdocs/admin
+COPY --from=builder /src/misc/httpd.conf /usr/local/apache2/conf/httpd.conf
+COPY --from=builder /src/misc/.htaccess /usr/local/apache2/htdocs/admin/.htaccess
+COPY --from=builder /src/misc/passwd /home/.htpasswds/tencent_global.gunraidersapi.com/admin/passwd
