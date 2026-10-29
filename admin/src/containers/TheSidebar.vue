@@ -10,7 +10,7 @@
         class="sidebar-classic"
     >
         <CSidebarBrand class="d-md-down-none" to="/">
-            <span class="p-3 font-weight-bold">GR Classic</span>
+            <span class="p-3 font-weight-bold">Duck Rails</span>
         </CSidebarBrand>
         
         <!--CRenderFunction flat :content-to-render="$options.nav" /-->

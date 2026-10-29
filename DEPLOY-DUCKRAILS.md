@@ -22,7 +22,8 @@ TKE region: West US (Silicon Valley)
 TKE cluster: rc-tke
 TKE cluster ID: cls-1gdfwglk
 TKE namespace: duckrails
-Ingress name: duckrails
+Ingress name: duckrails-lb
+Load balancer name: duckrails-lb
 API Deployment and Service: v1-api-deployment
 Admin Deployment and Service: admin-deploy
 Application Secret: game-api-env
@@ -124,7 +125,7 @@ Copy `REDIS_HOST`, `REDIS_PORT`, `REDIS_USERNAME`, and `REDIS_PASSWORD` from the
 2. Set `DB_HOST`, `DB_NAME`, and `DB_ACCOUNT` using the database step. The host includes the port, for example `10.0.0.12:3306`. Keep `DB_PROTOCOL=tcp`.
 3. Set `REDIS_HOST`, `REDIS_PORT`, and `REDIS_USERNAME`. Set `REDIS_NAMESPACE=duckrails`. Do not put the password here.
 4. Set `OCULUS_APPID=28912202281742343` and `K8S_NAMESPACE=duckrails`. Use `API_VERSION=v1` for the API route prefix. `APP_VERSION` is backend configuration; it is separate from the Unity application version and Photon matchmaking version.
-5. Keep `ENABLE_PHOTON_AUTH=1`: the Duck Rails client now sends Custom authentication. Generate the matching phrase as described in step 7 and configure BOTH Photon apps in step 13.
+5. Keep `ENABLE_PHOTON_AUTH=1`: the Duck Rails client now sends Custom authentication. Generate the matching phrase as described in step 7 and configure BOTH Photon apps in step 12.
 6. Remove every `REPLACE_*` placeholder. Keep passwords and private keys out of this file. The image sets `DEPLOY_ENV=production`; do not override that with a development value.
 7. Fill root-level `runtime.env` with the credentials described in step 7 below. The application Secret is created after the namespace exists.
 
@@ -211,7 +212,7 @@ META_EDITOR_USER_IDS=
 - `DB_PASSWORD`: the password you set for `duckrailsuser` in step 1.
 - `REDIS_PASSWORD`: existing password for the shared Redis instance/account. Do not reset that shared password.
 - `OCULUS_APPSECRET`: Meta developer dashboard, Duck Rails app `28912202281742343`, its App Secret. It must match the App ID baked into the API image.
-- `PHOTON_AUTH_PHASE`: generate a new random phrase locally using the command below. Save it and use exactly the same value for the `secret` query parameter on BOTH Photon apps in step 13. Never add it to Unity.
+- `PHOTON_AUTH_PHASE`: generate a new random phrase locally using the command below. Save it and use exactly the same value for the `secret` query parameter on BOTH Photon apps in step 12. Never add it to Unity.
 - `ADMIN_API_TOKEN`: generate a second, different random value if using the admin panel. Replace the literal passed to `tmpLoginForever(...)` inside `ensureAuthenticated()` in `admin/src/stores/auth.js` with that value before building the admin image. Put the identical raw value here (no `Bearer ` prefix). This existing frontend embeds the token in its bundle; anyone with it has shared API admin access. It is separate from the Apache password and all game credentials. If the image was already built, rebuild it after changing this value.
 - `META_EDITOR_USER_IDS`: optional comma-separated organization-scoped IDs from the Unity `[SignIn] Editor Meta organization-scoped user ID` log. Empty disables Editor access. These IDs do not grant administrator privileges.
 
@@ -227,59 +228,7 @@ $phraseGenerator.Dispose()
 
 Also save the values in the ignored root `runtime.env` if using it as your configuration record. Do not commit credentials. Create the Secret before the workload; then import it only into the API deployment. Do not attach it to the admin container. Retain the separate `rc-tcr-key` from step 6.
 
-## 8. Create the API deployment
-
-If you already created an API deployment without these objects, edit that deployment instead of creating a second one. Saving it restarts the pods.
-
-Create one API deployment. A second copy is not used.
-
-1. Left menu **Workload**, **Deployment**.
-2. Namespace `duckrails`. **Create**.
-3. Name: `v1-api-deployment`. Replicas: use the existing Duck Rails count for updates. For a first test deployment, start with 1 and size it for production after verification.
-4. On the container. The form splits the image across two fields:
-   - Name: `api`.
-   - Image: `uswccr.ccs.tencentyun.com/gr-tcr/duckrails-api-golang`.
-   - Image tag: `api-<git-hash>` from step 4. The tag includes the `api-` prefix.
-   - Image pull policy: **Always**.
-   - Image access credential: `rc-tcr-key`. The dropdown only lists docker-registry secrets in this namespace. If it is empty, step 6 was done in `duckz` or was skipped.
-   - Container port: `3000`. The process listens on 3000.
-5. Environment variables: import all keys from Secret `game-api-env`. You may keep a separate Custom `API_VERSION=v1` override in Tencent for flexibility; it overrides the image default. When migrating, compare old overrides with `build.env`, retain any intentionally needed integration settings, and remove obsolete application ConfigMap imports and duplicate values. Do not remove registry or certificate references.
-6. Health checks, both HTTP. Set timeout to 10 seconds to allow both dependency checks to finish:
-   - Liveness: port `3000`, path `/live`.
-   - Readiness: port `3000`, path `/ready`.
-7. Create.
-
-Open the new pod and check its status:
-
-- **Running and Ready**: required before sending traffic. Running alone is insufficient.
-- **ImagePullBackOff**: inspect the pod events for image name/tag, registry credentials, and registry reachability. Confirm `rc-tcr-key` is in `duckrails` and selected on the workload.
-- **CrashLoopBackOff**: inspect the application log. Missing build settings or credentials are reported by key name. Check MySQL connectivity/grants before rebuilding.
-- **Running but not Ready**: inspect `/ready` and its dependency checks. Check the database and Redis errors returned by the readiness endpoint.
-
-## 9. Create the admin deployment
-
-1. **Workload**, **Deployment**, namespace `duckrails`, **Create**.
-2. Name: `admin-deploy`. Replicas: 1.
-3. Container name: `admin`.
-4. Image: `uswccr.ccs.tencentyun.com/gr-tcr/duckrails-api-admin`. Image tag: `adm-duckrails-<git-hash>` from step 4.
-5. Image pull policy: **Always**. Image access credential: `rc-tcr-key`.
-6. Container port: `80`. Apache in that image listens on 80. The panel files are served under `/admin/`.
-7. Do not attach `game-api-env` to the admin deployment. The admin image does not read it. Its API URL and Apache password file are baked in at build time. No custom runtime environment variables are required. Remove explicit `PATH` and `HTTPD_*` overrides; their defaults come from the Apache image. Do not remove inherited image defaults.
-8. Liveness and readiness: **TCP port `80`**. `/admin/` is protected by Apache Basic authentication and normally returns 401 without credentials, so an unauthenticated HTTP probe there would fail. Verify the authenticated page manually after deployment.
-9. Create.
-
-## 10. Create the Services
-
-A Deployment is not reachable until a Service points at it. This guide disables CLB-to-pod direct access in the ingress, so use NodePort backend Services for that mode. Do not create LoadBalancer Services as well; the ingress provisions the public balancer. [Tencent ingress troubleshooting](https://cloud.tencent.com/document/product/457/90686) documents the ClusterIP backend limitation.
-
-1. Left menu **Services and Routes**, **Service**.
-2. Namespace `duckrails`. **Create**.
-3. API service. Name: `v1-api-deployment`. Type: **NodePort**. Select deployment `v1-api-deployment`. Map service port `80` to container port `3000`.
-4. Create a second Service named `admin-deploy`. Type: **NodePort**. Select deployment `admin-deploy`. Map service port `80` to container port `80`. The admin container listens on 80, so the ingress rule for `/admin` uses service port 80.
-
-Leave allocated node ports automatic. Confirm each Service selector finds the intended Ready pods, and that the node security groups allow the CLB traffic. Ingress rules still reference Service port `80`, not the allocated node port. If the live cluster uses a different/direct-access mode, verify its supported Service type before changing an existing working Service.
-
-## 11. Upload a Cloudflare origin certificate
+## 8. Upload a Cloudflare origin certificate
 
 Duckz did not buy a certificate from Tencent. Its row in **My Certificates** is `cloudflare-dz.gunraidersapi.com`, source **Upload certificate**, issuer **CloudFlare Origin Certificate**. This Duck Rails setup uses the same kind of certificate. Cloudflare signs it, and you paste it into Tencent. There is no DNS validation step.
 
@@ -298,6 +247,8 @@ Create it in Cloudflare:
 9. Copy the **Origin Certificate** and the **Private Key** into two text files on your machine. Cloudflare shows the private key on this screen only. Do not put either file in the git repo.
 
 Upload it to Tencent:
+
+**Always include both certificates:** paste your generated Origin Certificate first, then append the Cloudflare Origin RSA root certificate shown below in the same Certificate field. The extra root certificate is required for this setup, not an optional recovery step. Complete this upload before creating the pods.
 
 1. Tencent Cloud Console, product **SSL Certificate Service**, page **My Certificates**.
 2. **Upload Certificate**.
@@ -336,9 +287,52 @@ MOz2U0OBSif3FTkhCgZWQKOOLo1P42jHC3ssUZAtVNXrCk3fw9/E15k8NPkBazZ6
 
 The new row should look like the Duckz row: source **Upload certificate**, status **Issued**, and the domain list shows `duckrails.gunraidersapi.com` and **CloudFlare Origin Certificate**.
 
-This certificate is trusted by Cloudflare, not by a browser that talks to the load balancer directly. The `duckrails` DNS record in step 13 has to stay proxied.
+This certificate is trusted by Cloudflare, not by a browser that talks to the load balancer directly. The `duckrails` DNS record in step 12 has to stay proxied.
 
-## 12. Create a public load balancer for Duck Rails
+## 9. Create the API deployment
+
+If you already created an API deployment without these objects, edit that deployment instead of creating a second one. Saving it restarts the pods.
+
+Create one API deployment. In this Tencent workload-creation flow, its Service is created with the workload; there is no separate Create Services step. Set the generated `v1-api-deployment` Service port to `3000`, targeting container port `3000`. After creation, confirm that Service exists and selects the API pods.
+
+1. Left menu **Workload**, **Deployment**.
+2. Namespace `duckrails`. **Create**.
+3. Name: `v1-api-deployment`. Replicas: use the existing Duck Rails count for updates. For a first test deployment, start with 1 and size it for production after verification.
+4. On the container. The form splits the image across two fields:
+   - Name: `api`.
+   - Image: `uswccr.ccs.tencentyun.com/gr-tcr/duckrails-api-golang`.
+   - Image tag: `api-<git-hash>` from step 4. The tag includes the `api-` prefix.
+   - Image pull policy: **Always**.
+   - Image access credential: `rc-tcr-key`. The dropdown only lists docker-registry secrets in this namespace. If it is empty, step 6 was done in `duckz` or was skipped.
+   - Container port: `3000`. The process listens on 3000.
+5. Environment variables: import all keys from Secret `game-api-env`. You may keep a separate Custom `API_VERSION=v1` override in Tencent for flexibility; it overrides the image default. When migrating, compare old overrides with `build.env`, retain any intentionally needed integration settings, and remove obsolete application ConfigMap imports and duplicate values. Do not remove registry or certificate references.
+6. Health checks, both HTTP. Set timeout to 10 seconds to allow both dependency checks to finish:
+   - Liveness: port `3000`, path `/live`.
+   - Readiness: port `3000`, path `/ready`.
+7. Create.
+
+Open the new pod and check its status:
+
+- **Running and Ready**: required before sending traffic. Running alone is insufficient.
+- **ImagePullBackOff**: inspect the pod events for image name/tag, registry credentials, and registry reachability. Confirm `rc-tcr-key` is in `duckrails` and selected on the workload.
+- **CrashLoopBackOff**: inspect the application log. Missing build settings or credentials are reported by key name. Check MySQL connectivity/grants before rebuilding.
+- **Running but not Ready**: inspect `/ready` and its dependency checks. Check the database and Redis errors returned by the readiness endpoint.
+
+## 10. Create the admin deployment
+
+This workload-creation flow also creates the `admin-deploy` Service. Use Service port `80` targeting container port `80`; verify the generated Service after creation instead of creating a duplicate.
+
+1. **Workload**, **Deployment**, namespace `duckrails`, **Create**.
+2. Name: `admin-deploy`. Replicas: 1.
+3. Container name: `admin`.
+4. Image: `uswccr.ccs.tencentyun.com/gr-tcr/duckrails-api-admin`. Image tag: `adm-duckrails-<git-hash>` from step 4.
+5. Image pull policy: **Always**. Image access credential: `rc-tcr-key`.
+6. Container port: `80`. Apache in that image listens on 80. The panel files are served under `/admin/`.
+7. Do not attach `game-api-env` to the admin deployment. The admin image does not read it. Its API URL and Apache password file are baked in at build time. No custom runtime environment variables are required. Remove explicit `PATH` and `HTTPD_*` overrides; their defaults come from the Apache image. Do not remove inherited image defaults.
+8. Liveness and readiness: **TCP port `80`**. `/admin/` is protected by Apache Basic authentication and normally returns 401 without credentials, so an unauthenticated HTTP probe there would fail. Verify the authenticated page manually after deployment.
+9. Create.
+
+## 11. Create a public load balancer for Duck Rails
 
 Duckz already has a balancer. Leave it alone. This guide uses a separate Duck Rails balancer to avoid changing Duckz routing. Tencent also supports explicitly configured shared-CLB ingress groups; that is a separate design, not something to enable by simply choosing the Duckz balancer. [Tencent shared-CLB documentation](https://intl.cloud.tencent.com/ind/document/product/457/78649).
 
@@ -346,7 +340,7 @@ You do not create the balancer in the Cloud Load Balancer product. Creating the 
 
 1. Stay in cluster `rc-tke`. Left menu **Services and Routes**, then **Ingress**.
 2. Set the namespace to `duckrails`. **Create**.
-3. Ingress name: `duckrails`.
+3. Ingress name: `duckrails-lb`. Use `duckrails-lb` for the generated load balancer's display name as well; the TKE namespace remains `duckrails`.
 4. Namespace: `duckrails`.
 5. Ingress type: the CLB type (the Tencent load balancer controller). If the form lists Nginx as well, do not pick Nginx.
 6. Network type: **Public network**.
@@ -358,24 +352,31 @@ You do not create the balancer in the Cloud Load Balancer product. Creating the 
    - **Security group**: leave **Enable synchronization of security group configurations** unchecked.
    - **Redirect**: **Custom**. Leave the redirect list empty. Duckz does not send one path to another.
    - **Custom Listening Port**: checked. Add **HTTP** port **80** and **HTTPS** port **443**.
-10. Forwarding configuration. On the **HTTPS** **443** listener, the orange certificate warning is pointing at the **TLS configuration** block under the rules. The certificate is not in the forwarding-rule dropdowns. Those dropdowns are the backend Service and its port, and the port stays empty until a Service is selected.
-   In **TLS configuration**, the Secret list says **No data yet** until you create one. Click **create a new one**. On that page, select the uploaded certificate `cloudflare-duckrails.gunraidersapi.com` and create the Secret. TKE stores the certificate id in that Secret. It does not ask you to paste the key again. Return to the Ingress form, click the refresh icon beside **Secret**, and choose the Secret you just created. Set **Domain** to `duckrails.gunraidersapi.com` and check **Default certificate**. Configure the certificate here. A certificate added later on the load balancer page is overwritten by this ingress. Add two rules on that same domain:
-   - Domain `duckrails.gunraidersapi.com`, path `/admin`, backend the `admin-deploy` service, service port `80`.
-   - Domain `duckrails.gunraidersapi.com`, path `/`, backend the `v1-api-deployment` service, service port `80`.
-   The port in each rule is the Service port. The admin container listens on 80, so the `/admin` rule uses service port 80. The `/admin` rule is the more specific path, so the panel is not sent to the API.
-11. On the **HTTP** **80** listener, add the same two rules and no certificate, so a plain `http://` request still reaches the services.
-12. **Create Ingress**.
+10. **Complete TLS configuration before adding forwarding rules.** On the **HTTPS 443** listener, go to **TLS configuration** and click **create a new one** beside the Secret selector.
+    - Select the certificate already uploaded in step 8: `cloudflare-duckrails.gunraidersapi.com`.
+    - Create the certificate-reference Secret. TKE stores the certificate ID; do not paste the private key again.
+    - Return to the Ingress form, refresh the Secret list, and select that new Secret.
+    - Set **Domain** to `duckrails.gunraidersapi.com`.
+    - **Check Default certificate.** This is required in this setup. Finish these TLS fields before configuring forwarding.
+11. Add these forwarding rules on the **HTTPS 443** listener. Select each Service before selecting its port:
+    - Domain `duckrails.gunraidersapi.com`, path `/admin`, Service `admin-deploy`, port `80`.
+    - Domain `duckrails.gunraidersapi.com`, path `/`, Service `v1-api-deployment`, port `3000`.
+    These are the Services created with the workloads in steps 9 and 10. The API Service and container both use `3000`; admin uses `80`. The external HTTPS listener remains `443`.
+12. On the **HTTP 80** listener, add the same two forwarding rules (API backend port `3000`, admin backend port `80`) without a certificate.
+13. **Create Ingress**.
 
-The new row shows a load balancer id. Click it. That opens the new Duck Rails balancer in the load balancer console, in West US (Silicon Valley). Copy the address shown there. A domain-name balancer shows a domain and no IP. An older balancer shows a fixed IP. Write down whichever one is on the page. That address belongs to Duck Rails. It will not match the Duckz balancer.
+Keep the certificate configured on the Ingress. A certificate added only on the load balancer page can be overwritten by the ingress controller.
 
-## 13. Cloudflare and Photon
+The new row shows a load balancer ID. Click it to open the new balancer in West US (Silicon Valley). Set/confirm its display name is `duckrails-lb` so it is easy to identify. Copy its **public IP address** for the Cloudflare A record in step 12. Use this new balancer's IP, not Duckz's.
+
+## 12. Cloudflare and Photon
 
 These are not Tencent pages. They are required before the game can call the API.
 
 Cloudflare, zone `gunraidersapi.com`:
 
-1. Add one record for host `duckrails`. If step 12 gave you a domain, the type is **CNAME** and the target is that domain. If step 12 gave you an IP, the type is **A** and the target is that IP. The ingress sends `/` to the API and `/admin` to the admin panel.
-2. Proxy status: **Proxied** (orange cloud). The origin certificate from step 11 is only trusted by Cloudflare. A grey-cloud record makes the browser talk to Tencent directly and reject the certificate.
+1. Add an **A** record. Name: `duckrails`. IPv4 address: the public IP of `duckrails-lb` from step 11. The ingress sends `/` to the API and `/admin` to the admin panel.
+2. Proxy status: **Proxied** (orange cloud). The origin certificate from step 8 is only trusted by Cloudflare. A grey-cloud record makes the browser talk to Tencent directly and reject the certificate.
 3. SSL/TLS mode **Full (strict)** for this hostname. If changing the zone-wide mode, first confirm the other hosts in the zone support it; use a hostname-specific configuration rule when needed. Cloudflare speaks HTTPS to the balancer and checks the origin certificate. [Cloudflare Origin CA guidance](https://developers.cloudflare.com/ssl/origin-configuration/origin-ca/).
 
 Photon dashboard: repeat these settings on **both** Duck Rails apps:
@@ -389,7 +390,7 @@ Photon dashboard: repeat these settings on **both** Duck Rails apps:
 4. The Unity client sends `usr`, `pla`, and its current session `tkn`. Do not put the shared phrase into Unity. The dashboard supplies it server-side.
 5. The Unity assets already contain the two confirmed app IDs above. `PhotonVoiceChat` uses `UsePunAuthValues=true`, so configure this same Custom provider on Voice as well as Realtime. Keep `ENABLE_PHOTON_AUTH=1`.
 
-## 14. Check
+## 13. Check
 
 1. Pods belonging to `v1-api-deployment` are Running and Ready in namespace `duckrails`.
 2. `https://duckrails.gunraidersapi.com/api/v1/info/all` returns 200 and a JSON body with `data.version`.
@@ -405,7 +406,7 @@ Photon dashboard: repeat these settings on **both** Duck Rails apps:
 3. Create or update `game-api-env` in `duckrails`. Updating a Secret alone does not refresh a running container's environment.
 4. Build/push a new API image using section 4. Build the admin image only if its code, baked API URL, or Basic-auth file changed.
 5. Edit the existing API Deployment: select the new image tag, import `game-api-env`, and remove superseded configuration imports after comparing their values with the new build settings. Saving a pod-template change triggers a rollout; if only the Secret changed, explicitly restart the Deployment.
-6. Verify section 14 before removing old configuration objects or retiring a second database account. Keep them through the rollback window; restoring an old image may also require restoring its old configuration references.
+6. Verify section 13 before removing old configuration objects or retiring a second database account. Keep them through the rollback window; restoring an old image may also require restoring its old configuration references.
 
 Only one application Secret is needed. The image-pull Secret and certificate-reference Secret still serve separate purposes and remain in place.
 
@@ -429,14 +430,14 @@ After deployment, the Duck Rails namespace should retain these Secrets:
 
 - `game-api-env`: API runtime settings, imported only by the API workload.
 - `rc-tcr-key`: private registry credentials, referenced by API and admin image-pull settings.
-- The certificate-reference Secret generated in step 12: record its actual name, select it in ingress TLS configuration, and verify `spec.tls[].secretName`. Do not select Classic's or Duckz's certificate Secret.
+- The certificate-reference Secret generated in step 11: record its actual name, select it in ingress TLS configuration, and verify `spec.tls[].secretName`. Do not select Classic's or Duckz's certificate Secret.
 
 Keep the Kubernetes-managed `kube-root-ca.crt` ConfigMap if present or recreated. Old application ConfigMaps (`photon-id`, `photon-session-check`, `remote-api-config`, `shared-cache`, `shared-database`) and old credential Secrets are not required by this profile. Before deleting, check every workload's environment/volume references, image-pull references, service accounts, and ingress TLS references in that namespace. Two Secrets containing `qcloud_cert_id` are not necessarily redundant; retain each referenced one. Verify replacement pods start before retiring old objects.
 
 ## Troubleshooting this setup
 
 - `/live` and `/ready` returning HTTP 200 with `{}` is normal. If API endpoints work but health URLs time out externally, check that ingress forwards `/` to the API, not only `/api/v1`. Photon also uses the unversioned `/api/photon/authenticate` path.
-- Ingress uses the Service's exposed port, not necessarily the container port. An older deployment may expose API service port 3000; the example above uses service port 80 mapped to container port 3000. Inspect the actual Service and match it rather than changing a working mapping blindly.
+- For `v1-api-deployment`, set the Service port and container target port to `3000`, then select port `3000` in both ingress forwarding rules for `/`. For `admin-deploy`, use `80`. The public listener ports remain HTTP `80` and HTTPS `443`. Services are created with the workloads in this Tencent flow; do not create duplicates.
 - Editor `missing authorization header`: verify the running image contains Editor login support and the request includes `X-Meta-Editor-Login: 1`. An unapproved organization-scoped ID produces a different error. Secret changes require new pods.
 - Admin requests to `classic-api.example.com`: fill both URLs in `admin/.env.production`, rebuild/push the admin image, roll out the admin deployment, then hard-refresh the browser. Workload environment variables do not change bundled JavaScript.
 - Admin 401: verify `ADMIN_API_TOKEN` is loaded in the API pod and exactly matches the browser's Authorization value (without `Bearer ` in the Secret). Clear stale `acc_token` cookies if the frontend token changed. A valid player session lacking admin privileges returns 403 instead.
