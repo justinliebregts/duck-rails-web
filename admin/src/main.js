@@ -39,7 +39,7 @@ import gstate from './global-state.js'
 Vue.prototype.$gstate = gstate;
 Vue.prototype.noop = function() {};
 
-document.title = 'Gun Raiders Classic Admin';
+document.title = 'Duck Rails Admin';
 
 new Vue({
     el: '#app',

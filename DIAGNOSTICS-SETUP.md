@@ -9,6 +9,8 @@ The Unity client now queues diagnostic reports and uploads through the normal au
 
 API routes (under `/api/v1`):
 
+The Vue admin app includes a **Diagnostics** sidebar page at `/admin/#/diagnostics`: filter open/resolved/all reports, page through results, inspect snapshot/history/events/preset, download evidence, and resolve/reopen with notes. Sign in using the API admin token (validated against the live inbox); the token is not baked into the image. The existing Apache site password remains separate. Publish the admin image with `admin/cmd/tencent/tcr/pushToSV-GRC.bat`, then select its `adm-duckrails-<commit>` tag on the existing TKE admin workload.
+
 - `POST /diagnostics/report`: authenticated game session; 1 MiB maximum, 20 requests/minute per IP; GUID ID is idempotent and bound to the reporter. Existing records cannot be overwritten or reopened by a retry.
 - `GET /diagnostics/admin/reports?status=open&offset=0`: admin only; at most 100 summaries plus total. Status accepts `open`, `resolved` or `all`.
 - `GET /diagnostics/admin/reports/:id`: admin-only evidence download.

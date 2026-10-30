@@ -78,7 +78,7 @@ function configRoutes() {
         redirect: '/dashboard',
         name: 'Home',
         component: TheContainer,
-        children: [{
+        children: [{ path: 'diagnostics', name: 'Diagnostics', component: () => import('@/views/diagnostics/Diagnostics.vue') }, {
             path: 'dashboard',
             name: 'Dashboard',
             component: Home

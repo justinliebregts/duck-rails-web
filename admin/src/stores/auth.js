@@ -41,14 +41,6 @@ export const useAuthStore = defineStore('auth', {
         },
         async ensureAuthenticated() {
 
-            //console.log('Current Token:', this.token);
-            //TODO: unsafe once, should be gone when using actual Login page
-            if (!await this.validateAccessToken()) {
-                this.tmpLoginForever('Xe94YkdkD9ejWG5rp42nugeHnEr');
-                return true;
-            }
-            //TODO: unsafe once
-
             if (await this.validateAccessToken()){
               return true;
             }
@@ -83,7 +75,7 @@ export const useAuthStore = defineStore('auth', {
         tmpLoginForever(newAccToken) { //TODO: should be gone when actual login exist
             this.token = newAccToken
 
-            Cookies.set('acc_token', newAccToken);
+            Cookies.set('acc_token', newAccToken, { sameSite: 'Strict', secure: window.location.protocol === 'https:' });
         },
         saveLogin(newAccToken, newRefToken) {
         //saveLogin(newAccToken, newRefToken) {

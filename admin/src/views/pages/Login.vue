@@ -1,86 +1,21 @@
 <template>
-    <div class="c-app flex-row align-items-center">
-        <CContainer>
-            <CRow class="justify-content-center">
-                <CCol md="8">
-                    <CCardGroup>
-                        <CCard class="p-4">
-                            <CCardBody>
-                                <CForm>
-                                    <h1>Login</h1>
-                                    <p class="text-muted">
-                                        Sign In to your account
-                                    </p>
-                                    <CInput
-                                        placeholder="Username"
-                                        autocomplete="username email"
-                                    >
-                                        <template #prepend-content
-                                            ><CIcon name="cil-user"
-                                        /></template>
-                                    </CInput>
-                                    <CInput
-                                        placeholder="Password"
-                                        type="password"
-                                        autocomplete="curent-password"
-                                    >
-                                        <template #prepend-content
-                                            ><CIcon name="cil-lock-locked"
-                                        /></template>
-                                    </CInput>
-                                    <CRow>
-                                        <CCol col="6" class="text-left">
-                                            <CButton
-                                                color="primary"
-                                                class="px-4"
-                                                >Login</CButton
-                                            >
-                                        </CCol>
-                                        <CCol col="6" class="text-right">
-                                            <CButton color="link" class="px-0"
-                                                >Forgot password?</CButton
-                                            >
-                                            <CButton
-                                                color="link"
-                                                class="d-lg-none"
-                                                >Register now!</CButton
-                                            >
-                                        </CCol>
-                                    </CRow>
-                                </CForm>
-                            </CCardBody>
-                        </CCard>
-                        <CCard
-                            color="primary"
-                            text-color="white"
-                            class="text-center py-5 d-md-down-none"
-                            body-wrapper
-                        >
-                            <CCardBody>
-                                <h2>Sign up</h2>
-                                <p>
-                                    Lorem ipsum dolor sit amet, consectetur
-                                    adipisicing elit, sed do eiusmod tempor
-                                    incididunt ut labore et dolore magna aliqua.
-                                </p>
-                                <CButton
-                                    color="light"
-                                    variant="outline"
-                                    size="lg"
-                                >
-                                    Register Now!
-                                </CButton>
-                            </CCardBody>
-                        </CCard>
-                    </CCardGroup>
-                </CCol>
-            </CRow>
-        </CContainer>
-    </div>
-</template>
-
+<div class="c-app align-items-center justify-content-center p-3"><form class="card p-4 login-card" @submit.prevent="login">
+<h1>Duck Rails Admin</h1><p>Enter the API admin token to access reports and administration tools.</p>
+<label for="admin-token">Admin token</label><input id="admin-token" v-model="token" class="form-control mb-3" type="password" autocomplete="current-password" required :disabled="busy">
+<p v-if="error" role="alert" class="alert alert-danger">{{ error }}</p><button type="submit" class="btn btn-primary" :disabled="busy || !token.trim()">{{ busy ? 'Checking…' : 'Sign in' }}</button>
+</form></div></template>
 <script>
 export default {
-    name: "Login",
-};
+name: 'Login', data: () => ({ token: '', busy: false, error: '' }),
+methods: { async login() {
+this.busy = true; this.error = ''
+const token = this.token.trim().replace(/^Bearer\s+/i, '')
+try {
+await this.axios.get(this.$gstate.defaultUrl + '/diagnostics/admin/reports', { headers: { Authorization: 'Bearer ' + token }, timeout: 20000 })
+this.$auth.tmpLoginForever('Bearer ' + token); this.token = ''; this.$router.replace('/diagnostics')
+} catch (error) { this.error = error.response && [401, 403].includes(error.response.status) ? 'The admin token was rejected.' : 'Could not connect to the admin API. Please try again.' }
+finally { this.busy = false }
+} }
+}
 </script>
+<style scoped>.login-card { width: 100%; max-width: 480px; }</style>

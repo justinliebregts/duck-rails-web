@@ -13,5 +13,5 @@
 5. This uploads to TCR only. It does not roll out TKE. Justin uses Tencent's web console: select the existing Duck Rails API workload in namespace `duckrails`, record the previous image for rollback, select the new image tag, and apply the rolling update. Verify the actual workload name before changing it and confirm replacement pods are Ready and the API responds.
 6. Apply required additive SQL migrations to `duckrails_tencent_global` before the API rollout. For diagnostics, use `api/sql/diagnostic_reports.sql`. Configure `ADMIN_API_TOKEN` in the API's Tencent Secret/environment; the Unity inbox's matching local credential lives in the Unity repo root `.env.local`, not this repo.
 
-- The admin website has a separate script, `admin/cmd/tencent/tcr/pushToSV-GRC.bat`; do not run it for API-only changes.
+- The admin website has a separate script, `admin/cmd/tencent/tcr/pushToSV-GRC.bat`; run it from its directory for admin changes. It publishes `duckrails-api-admin:adm-duckrails-<git-short-hash>` to the same registry and does not roll out TKE. Select that tag on the existing admin workload in Tencent's `duckrails` namespace. Do not run it for API-only changes.
 - Report Git push, TCR image push, database migration, and TKE rollout separately; do not claim a production rollout from a registry push alone.

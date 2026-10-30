@@ -48,13 +48,16 @@
         <CDropdownItem>
             <CIcon name="cil-shield-alt" /> Lock Account
         </CDropdownItem>
-        <CDropdownItem> <CIcon name="cil-lock-locked" /> Logout </CDropdownItem>
+        <CDropdownItem @click="logout"> <CIcon name="cil-lock-locked" /> Logout </CDropdownItem>
     </CDropdown>
 </template>
 
 <script>
 export default {
     name: "TheHeaderDropdownAccnt",
+    methods: {
+        logout() { this.$auth.Logout(); this.$router.replace('/pages/login'); }
+    },
     data() {
         return {
             itemsCount: 42,
