@@ -1,3 +1,4 @@
+@echo off
 ::%1 repo domain hkccr.ccs.tencentyun.com
 ::%2 username 200027558228
 ::%3 password

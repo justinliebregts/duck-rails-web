@@ -56,6 +56,7 @@ type AppContainer struct {
 }
 
 func RegisterAPIRoutes(apir fiber.Router, ac *AppContainer, sesHdl myHDR.Session) {
+	SetupDiagnosticRoutes(apir)
 	SetupBuildHashRoutes(apir)
 	SetupInfoRoutes(apir, ac.CronJobSvc)
 	SetupPatchRoutes(apir, ac.DbPatchRepo)

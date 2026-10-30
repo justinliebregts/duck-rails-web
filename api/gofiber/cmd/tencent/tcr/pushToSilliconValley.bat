@@ -1,4 +1,6 @@
 @echo off
+setlocal
+cd /d "%~dp0"
 
 CALL ".\shared\dockerCheck.bat"
 if %errorlevel% neq 0 (
@@ -15,11 +17,13 @@ CD %scriptRoot%
 CALL ".\shared\sharedEnvClean.bat"
 
 CALL ".\sv\sharedEnv.bat"
+@echo off
 
 set tcrRepo=duckrails-api-golang
 
 :: Login with target repo
-CALL ".\shared\login.bat" %tencentBase% %tcrUsername% %tcrPass%
+@CALL ".\shared\login.bat" %tencentBase% %tcrUsername% %tcrPass%
+if errorlevel 1 exit /b 1
 
 CD ..\..\..
 
@@ -34,9 +38,11 @@ set tag=%tag%:api-%gitver%
 :: tag image in local repo
 :: docker tag [imageId] uswccr.ccs.tencentyun.com/gr-tcr/duckrails-api-golang:[tag]
 docker build --build-arg GIT_COMMIT=%gitver% --platform linux/amd64 -t %tag% -f ./Dockerfile .
+if errorlevel 1 exit /b 1
 
 :: Push image to Registry
 docker push %tag%
+if errorlevel 1 exit /b 1
 
 ::forget all variable
 CALL "%scriptRoot%shared\sharedEnvClean.bat"
@@ -45,5 +51,5 @@ CD %pWD%
 
 ::docker image rm %tag%
 
-timeout /t 30
-@echo on
+endlocal
+exit /b 0
