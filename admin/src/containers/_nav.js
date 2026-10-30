@@ -1,7 +1,6 @@
 export default [{
     _name: 'CSidebarNav',
     _children: [
-        { _name: "CSidebarNavItem", name: "Diagnostics", to: "/diagnostics", icon: "cil-list" },
         {
             _name: 'CSidebarNavTitle',
             _children: ['Dashboard']
@@ -23,6 +22,12 @@ export default [{
             name: 'Items',
             to: '/items/all',
             icon: 'cil-basket'
+        },
+        {
+            _name: 'CSidebarNavItem',
+            name: 'Diagnostics',
+            to: '/diagnostics',
+            icon: 'cil-list'
         },
         {
             _name: 'CSidebarNavItem',
