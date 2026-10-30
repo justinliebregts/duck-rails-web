@@ -11,8 +11,8 @@
       <p v-if="error" role="alert" class="alert alert-danger mt-3">{{ error }}</p>
       <p v-if="notice" role="status" class="alert alert-success mt-3">{{ notice }}</p>
       <div class="table-responsive mt-3"><table class="table table-hover">
-        <thead><tr><th>Created</th><th>Summary</th><th>Category</th><th>Platform</th><th>Status</th><th></th></tr></thead>
-        <tbody><tr v-for="report in reports" :key="report.id"><td>{{ date(report.created) }}</td><td class="summary">{{ report.summary }}</td><td>{{ report.category }}</td><td>{{ report.platform }}</td><td>{{ report.status }}</td><td><button class="btn btn-sm btn-outline-primary" :disabled="detailLoading || saving" @click="open(report.id)">View</button></td></tr></tbody>
+        <thead><tr><th>Report ID</th><th>Created</th><th>Summary</th><th>Category</th><th>Platform</th><th>Status</th><th></th></tr></thead>
+        <tbody><tr v-for="report in reports" :key="report.id"><td><code class="report-id">{{ report.id }}</code><button class="btn btn-sm btn-outline-secondary mt-1" :aria-label="'Copy report ID ' + report.id" @click="copyId(report.id)">Copy ID</button></td><td>{{ date(report.created) }}</td><td class="summary">{{ report.summary }}</td><td>{{ report.category }}</td><td>{{ report.platform }}</td><td>{{ report.status }}</td><td><button class="btn btn-sm btn-outline-primary" :disabled="detailLoading || saving" @click="open(report.id)">View</button></td></tr></tbody>
       </table></div>
       <p v-if="!loading && !error && !reports.length">No {{ status === 'all' ? '' : status }} reports.</p>
       <div class="d-flex controls"><button class="btn btn-outline-secondary" :disabled="offset === 0 || loading || saving" @click="offset -= 100; load()">Previous</button><span>Page {{ Math.floor(offset / 100) + 1 }}</span><button class="btn btn-outline-secondary" :disabled="offset + 100 >= total || loading || saving" @click="offset += 100; load()">Next</button></div>
@@ -20,7 +20,10 @@
     <p v-if="detailLoading" role="status">Loading report…</p>
     <section v-if="selected" class="card p-3" aria-label="Report details">
       <div class="d-flex justify-content-between"><h2>Report details</h2><button class="btn btn-outline-secondary" :disabled="saving" @click="selected = null">Close</button></div>
-      <h3 class="h5 mt-3">{{ selected.summary }}</h3><p>{{ selected.id }} · {{ date(selected.created) }} · {{ selected.status }}</p>
+      <h3 class="h5 mt-3">{{ selected.summary }}</h3>
+      <p><strong>Report ID:</strong> <code>{{ selected.id }}</code> <button class="btn btn-sm btn-outline-secondary" @click="copyId(selected.id)">Copy ID</button></p>
+      <p class="text-muted">Paste this ID into chat to identify the exact report to investigate.</p>
+      <p>{{ date(selected.created) }} · {{ selected.status }}</p>
       <p class="summary">Build: {{ selected.build }} · Platform: {{ selected.platform }} · Category: {{ selected.category }}</p>
       <p v-if="selected.resolution"><strong>Resolution:</strong> {{ selected.resolution }}</p>
       <p v-if="payloadError" class="alert alert-warning">The payload is not valid JSON. Download is still available.</p>
@@ -43,6 +46,15 @@ export default {
   computed: { endpoint() { return `${this.$gstate.defaultUrl}/diagnostics/admin/reports` } },
   mounted() { this.load() },
   methods: {
+    async copyId(id) {
+      this.notice = ''
+      try {
+        await navigator.clipboard.writeText(id)
+        this.notice = `Copied report ID ${id}. Paste it into chat.`
+      } catch (_) {
+        this.notice = `Clipboard unavailable. Select and copy this report ID: ${id}`
+      }
+    },
     date(value) { return value ? new Date(value).toLocaleString() : 'Unknown' },
     pretty(value) { return JSON.stringify(value == null ? null : value, null, 2) },
     failure(error) { return error.response && [401, 403].includes(error.response.status) ? 'Admin access rejected. Sign out and sign in with the configured admin token.' : 'Request failed. Check the API connection and try again.' },
@@ -86,6 +98,7 @@ export default {
 <style scoped>
 .controls { gap: 12px; flex-wrap: wrap; align-items: center; }
 .summary { overflow-wrap: anywhere; max-width: 500px; }
+.report-id { display: block; width: 18ch; overflow-wrap: anywhere; user-select: all; }
 details { margin-top: 12px; } summary { cursor: pointer; font-weight: 600; }
 pre { max-height: 360px; overflow: auto; background: #f3f5f7; padding: 16px; white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 8px; }
 </style>
