@@ -33,4 +33,4 @@ After deployment, verify a fresh account and repeat login, allowed/disallowed Ed
 
 ## Separate integration still needed
 
-Classic does not provide Duckz's /duckz wallet/store/IAP/loadout/admin-check routes or /player/cosmetics routes. The client starts those requests after login without awaiting them, so authentication can complete, but those features will fail until the existing Duckz implementations are integrated. This change does not claim commerce, cosmetic restoration, or the expedition session milestone is complete.
+Classic did not provide the wallet/store/IAP/loadout/admin-check routes or /player/cosmetics routes. October 31 adds the reused economy implementation and admin coin controls for gameplay coins directly under `/api/v1` (for example `/api/v1/wallet` and `/api/v1/store/buy`), without a game-name prefix; see [ECONOMY-SETUP.md](ECONOMY-SETUP.md) for the required migration and separate API/admin rollout. Local integration is not evidence of deployment. Cosmetic restoration and expedition acceptance remain separate work.

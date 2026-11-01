@@ -6,6 +6,7 @@
                 <h1 v-if="playerData">{{ playerData.name }} <small style="font-size:0.85rem">{{ playerData.id }}</small></h1>
             </CHeader>
 
+            <DuckCoinsCard :player-id="playerId" @toast="toast" />
             <CCard v-if="playerData">
                 <CCardBody>
                     <CRow>
@@ -248,7 +249,9 @@
 </template>
 
 <script>
+import DuckCoinsCard from "./DuckCoinsCard.vue";
 export default {
+  components: { DuckCoinsCard },
   name: "PlayerDetails",
   data (){
     return {
@@ -473,7 +476,7 @@ export default {
             })
         },
         getTransactionData: function (){
-            const urlstr = this.$gstate.getBaseUrl() + '/inventory/admin/all/' + this.playerId;
+            const urlstr = this.$gstate.getBaseUrl() + '/admin/transactions/' + this.playerId;
             this.isSearchingPlayers = true;
             this.axios.get(urlstr, this.$auth.apiOptions)
             .then(response => {

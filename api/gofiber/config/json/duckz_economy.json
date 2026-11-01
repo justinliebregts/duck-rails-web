@@ -1,0 +1,44 @@
+{
+  "coins_per_bar": 100,
+  "max_bars_per_deposit": 12,
+  "max_coins_per_hour": 20000,
+  "store_items": [
+    {
+      "key": "weapon_nail_bat",
+      "price": 275,
+      "durable": false
+    },
+    {
+      "key": "weapon_fry_pan",
+      "price": 175,
+      "durable": false
+    },
+    {
+      "key": "item_helmet",
+      "price": 75,
+      "durable": false
+    },
+    {
+      "key": "item_flashlight",
+      "price": 25,
+      "durable": false
+    },
+    {
+      "key": "item_walkie_talkie",
+      "price": 50,
+      "durable": false
+    },
+    {
+      "key": "item_night_vision_goggles",
+      "price": 300,
+      "durable": false
+    },
+    {
+      "key": "bag_basic",
+      "price": 100,
+      "durable": false,
+      "slots": 4
+    }
+  ],
+  "iap_skus": []
+}

@@ -6,6 +6,7 @@ import (
 	"gofiber/internal/router"
 	oculusRmtSRV "gofiber/internal/service/remote/oculus"
 	myREPO "gofiber/repository"
+	dzRouter "gofiber/router/duckz"
 	mySRV "gofiber/service"
 	"gofiber/service/cloudflare"
 	myK8sSRV "gofiber/service/k8s"
@@ -57,6 +58,7 @@ type AppContainer struct {
 
 func RegisterAPIRoutes(apir fiber.Router, ac *AppContainer, sesHdl myHDR.Session) {
 	SetupDiagnosticRoutes(apir)
+	dzRouter.SetupDuckzEconomyRoutes(apir, ac.OculusRemoteSvc)
 	SetupBuildHashRoutes(apir)
 	SetupInfoRoutes(apir, ac.CronJobSvc)
 	SetupPatchRoutes(apir, ac.DbPatchRepo)
