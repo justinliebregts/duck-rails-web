@@ -173,11 +173,11 @@ func (r *economyRepositoryImpl) WithTx(playerID string, fn func(tx EconomyTx) er
 		// Serialize the welcome grant with purchases and admin adjustments.
 		// The receipt survives transaction deletion and a zero balance.
 		var count int64
-		if err := tx.Table("rails_wallet_grants").Where("player_id = ?", playerID).Count(&count).Error; err != nil {
+		if err := tx.Table("duckrails_wallet_grants").Where("player_id = ?", playerID).Count(&count).Error; err != nil {
 			return err
 		}
 		if count == 0 {
-			if err := tx.Exec("INSERT INTO rails_wallet_grants (player_id, created_at) VALUES (?, ?)", playerID, time.Now().UTC()).Error; err != nil {
+			if err := tx.Exec("INSERT INTO duckrails_wallet_grants (player_id, created_at) VALUES (?, ?)", playerID, time.Now().UTC()).Error; err != nil {
 				return err
 			}
 			grant := myMDL.Transaction{TransactionCreation: myMDL.TransactionCreation{PlayerID: playerID, Credit: 100,

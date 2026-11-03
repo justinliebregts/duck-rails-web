@@ -24,9 +24,9 @@ func TestWelcomeGrantOnlyOnceIncludingEmptyWallet(t *testing.T) {
 	}{{0, 100}, {1, 100}, {1, 0}} {
 		mock.ExpectBegin()
 		mock.ExpectQuery("SELECT `id` FROM `players`.*FOR UPDATE").WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("test-player"))
-		mock.ExpectQuery("SELECT count.*FROM `rails_wallet_grants`").WithArgs("test-player").WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(tc.receipt))
+		mock.ExpectQuery("SELECT count.*FROM `duckrails_wallet_grants`").WithArgs("test-player").WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(tc.receipt))
 		if tc.receipt == 0 {
-			mock.ExpectExec("INSERT INTO rails_wallet_grants").WithArgs("test-player", sqlmock.AnyArg()).WillReturnResult(sqlmock.NewResult(1, 1))
+			mock.ExpectExec("INSERT INTO duckrails_wallet_grants").WithArgs("test-player", sqlmock.AnyArg()).WillReturnResult(sqlmock.NewResult(1, 1))
 			mock.ExpectExec("INSERT INTO `transactions`").WillReturnResult(sqlmock.NewResult(1, 1))
 		}
 		mock.ExpectQuery("SELECT COALESCE.*FROM `transactions`").WithArgs("test-player").WillReturnRows(sqlmock.NewRows([]string{"balance"}).AddRow(tc.coins))
@@ -53,8 +53,8 @@ func TestWelcomeGrantRollsBackOnLedgerFailure(t *testing.T) {
 	}
 	mock.ExpectBegin()
 	mock.ExpectQuery("SELECT `id` FROM `players`.*FOR UPDATE").WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("test-player"))
-	mock.ExpectQuery("SELECT count.*FROM `rails_wallet_grants`").WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
-	mock.ExpectExec("INSERT INTO rails_wallet_grants").WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectQuery("SELECT count.*FROM `duckrails_wallet_grants`").WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
+	mock.ExpectExec("INSERT INTO duckrails_wallet_grants").WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectExec("INSERT INTO `transactions`").WillReturnError(gorm.ErrInvalidData)
 	mock.ExpectRollback()
 	if _, err := NewEconomyRepository(db).Balance("test-player"); err == nil {

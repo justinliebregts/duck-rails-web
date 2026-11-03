@@ -41,7 +41,7 @@ type CoinDeposit struct {
 }
 
 func (CoinDeposit) TableName() string {
-	return "duckz_coin_deposits"
+	return "duckrails_coin_deposits"
 }
 
 // StorePurchase records a coin store purchase; RequestID is the client idempotency key.
@@ -56,7 +56,7 @@ type StorePurchase struct {
 }
 
 func (StorePurchase) TableName() string {
-	return "duckz_store_purchases"
+	return "duckrails_store_purchases"
 }
 
 // Entitlement is a durable IAP owned forever; unique on (PlayerID, Sku) and PlatformTxnID.
@@ -70,7 +70,7 @@ type Entitlement struct {
 }
 
 func (Entitlement) TableName() string {
-	return "duckz_entitlements"
+	return "duckrails_entitlements"
 }
 
 // Loadout is the avatar a player has equipped. Empty SkinKey is the default duck.
@@ -81,7 +81,7 @@ type Loadout struct {
 }
 
 func (Loadout) TableName() string {
-	return "duckz_loadouts"
+	return "duckrails_loadouts"
 }
 
 // AdminTransaction is one `transactions` row as shown on the Duckz admin player page.
