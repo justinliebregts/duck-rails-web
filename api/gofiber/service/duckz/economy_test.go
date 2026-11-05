@@ -587,3 +587,50 @@ func TestAdminAdjustValidates(t *testing.T) {
 		}
 	}
 }
+
+func TestWalletCapDepositAndRetryAfterSpending(t *testing.T) {
+	repo, _, svc := newTestService()
+	repo.state.transactions = append(repo.state.transactions, myMDL.Transaction{TransactionCreation: myMDL.TransactionCreation{PlayerID: player, Credit: 1950}})
+	now := time.Now()
+	res := mustDeposit(t, svc, "partial", 1, now)
+	if res.Coins != 2000 || res.Credited != 50 {
+		t.Fatalf("partial: %+v", res)
+	}
+	full := mustDeposit(t, svc, "full", 1, now)
+	if full.Coins != 2000 || full.Credited != 0 {
+		t.Fatalf("full: %+v", full)
+	}
+	buy, err := svc.Buy(player, BuyRequest{RequestID: "spend", ItemKey: "snack"}, now)
+	if err != nil || buy.Coins != 1950 {
+		t.Fatalf("buy: %+v %v", buy, err)
+	}
+	retry := mustDeposit(t, svc, "full", 1, now)
+	if retry.Coins != 1950 || retry.Credited != 0 || !retry.Idempotent {
+		t.Fatalf("retry: %+v", retry)
+	}
+	refill := mustDeposit(t, svc, "refill", 1, now)
+	if refill.Coins != 2000 || refill.Credited != 50 {
+		t.Fatalf("refill: %+v", refill)
+	}
+}
+
+func TestWalletCapNormalizesOldBalanceAndAdminGrants(t *testing.T) {
+	repo, _, svc := newTestService()
+	repo.state.transactions = append(repo.state.transactions, myMDL.Transaction{TransactionCreation: myMDL.TransactionCreation{PlayerID: player, Credit: 5000}})
+	wallet, err := svc.Wallet(player)
+	if err != nil || wallet.Coins != 2000 || repo.state.balance(player) != 2000 {
+		t.Fatalf("wallet: %+v %v", wallet, err)
+	}
+	svc.Wallet(player)
+	if len(repo.state.transactions) != 2 {
+		t.Fatal("normalization duplicated")
+	}
+	buy, err := svc.Buy(player, BuyRequest{RequestID: "spend", ItemKey: "snack"}, time.Now())
+	if err != nil || buy.Coins != 1950 {
+		t.Fatalf("buy: %+v %v", buy, err)
+	}
+	grant, err := svc.AdminAdjust("admin", AdminAdjustRequest{PlayerID: player, Amount: 100})
+	if err != nil || grant.Coins != 2000 || grant.Amount != 50 {
+		t.Fatalf("grant: %+v %v", grant, err)
+	}
+}

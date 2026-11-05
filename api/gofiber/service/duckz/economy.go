@@ -17,6 +17,7 @@ import (
 const (
 	logPrefix            = "duckz.economy"
 	maxRequestIDLen      = 64
+	MaxWalletCoins       = 2000
 	depositWindow        = time.Hour
 	maxAdminAdjustAmount = 1000000
 	adminAdjustListLimit = 50
@@ -130,7 +131,7 @@ func validRequestID(id string) bool {
 }
 
 func (s *economyServiceImpl) Wallet(playerID string) (*WalletResult, error) {
-	coins, err := s.repo.Balance(playerID)
+	coins, err := s.cappedBalance(playerID)
 	if err != nil {
 		return nil, err
 	}
@@ -207,11 +208,19 @@ func (s *economyServiceImpl) Deposit(playerID string, req DepositRequest, now ti
 	result := &DepositResult{Credited: coins}
 
 	err := s.repo.WithTx(playerID, func(tx dzREPO.EconomyTx) error {
+		bal, err := normalizeBalance(tx, playerID)
+		if err != nil {
+			return err
+		}
+		if coins > MaxWalletCoins-bal {
+			coins = MaxWalletCoins - bal
+		}
+		result.Credited = coins
 		recent, err := tx.SumDepositCoinsSince(playerID, now.Add(-depositWindow))
 		if err != nil {
 			return err
 		}
-		if recent+coins > s.eco.MaxCoinsPerHour {
+		if coins > 0 && recent+coins > s.eco.MaxCoinsPerHour {
 			return myERR.ErrDuckzDepositCapReached
 		}
 
@@ -235,7 +244,7 @@ func (s *economyServiceImpl) Deposit(playerID string, req DepositRequest, now ti
 		}); err != nil {
 			return err
 		}
-		result.Coins, err = tx.Balance(playerID)
+		result.Coins, err = normalizeBalance(tx, playerID)
 		return err
 	})
 	if errors.Is(err, myERR.ErrDuckzDuplicate) {
@@ -261,7 +270,7 @@ func (s *economyServiceImpl) idempotentDeposit(playerID, requestID string) (*Dep
 	if existing.PlayerID != playerID {
 		return nil, myERR.ErrDuckzRequestIDOtherPlayer
 	}
-	bal, err := s.repo.Balance(playerID)
+	bal, err := s.cappedBalance(playerID)
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +297,7 @@ func (s *economyServiceImpl) Buy(playerID string, req BuyRequest, now time.Time)
 
 	result := &BuyResult{ItemKey: item.Key}
 	err := s.repo.WithTx(playerID, func(tx dzREPO.EconomyTx) error {
-		bal, err := tx.Balance(playerID)
+		bal, err := normalizeBalance(tx, playerID)
 		if err != nil {
 			return err
 		}
@@ -359,7 +368,7 @@ func (s *economyServiceImpl) idempotentBuy(playerID string, req BuyRequest) (*Bu
 	if existing.PlayerID != playerID {
 		return nil, myERR.ErrDuckzRequestIDOtherPlayer
 	}
-	bal, err := s.repo.Balance(playerID)
+	bal, err := s.cappedBalance(playerID)
 	if err != nil {
 		return nil, err
 	}
@@ -443,10 +452,14 @@ func (s *economyServiceImpl) AdminAdjust(adminID string, req AdminAdjustRequest)
 
 	result := &AdminAdjustResult{Amount: req.Amount}
 	err := s.repo.WithTx(req.PlayerID, func(tx dzREPO.EconomyTx) error {
-		bal, err := tx.Balance(req.PlayerID)
+		bal, err := normalizeBalance(tx, req.PlayerID)
 		if err != nil {
 			return err
 		}
+		if req.Amount > MaxWalletCoins-bal {
+			req.Amount = MaxWalletCoins - bal
+		}
+		result.Amount = req.Amount
 		if bal+req.Amount < 0 {
 			result.Coins = bal
 			return myERR.ErrDuckzInsufficientCoins
@@ -503,4 +516,30 @@ func containsString(list []string, v string) bool {
 		}
 	}
 	return false
+}
+
+// Normalize old wallets under the existing player-row lock. Record excess as a
+// ledger debit so spending cannot uncover a hidden balance above the cap.
+func normalizeBalance(tx dzREPO.EconomyTx, playerID string) (int, error) {
+	bal, err := tx.Balance(playerID)
+	if err != nil || bal <= MaxWalletCoins {
+		return bal, err
+	}
+	tr := myMDL.Transaction{TransactionCreation: myMDL.TransactionCreation{
+		PlayerID: playerID, Debit: bal - MaxWalletCoins,
+		Platform: sql.NullString{String: "wallet_cap", Valid: true},
+	}}
+	if err = tx.CreateTransaction(&tr); err != nil {
+		return 0, err
+	}
+	return MaxWalletCoins, nil
+}
+
+func (s *economyServiceImpl) cappedBalance(playerID string) (coins int, err error) {
+	err = s.repo.WithTx(playerID, func(tx dzREPO.EconomyTx) error {
+		var e error
+		coins, e = normalizeBalance(tx, playerID)
+		return e
+	})
+	return
 }
