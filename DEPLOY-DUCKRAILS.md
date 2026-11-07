@@ -35,15 +35,15 @@ DNS record name: duckrails
 Public hostname: duckrails.gunraidersapi.com
 API base URL: https://duckrails.gunraidersapi.com/api/v1/
 Admin URL: https://duckrails.gunraidersapi.com/admin/
-Photon callback: https://duckrails.gunraidersapi.com/api/photon/authenticate
+Photon callback: DuckZ webhook. app=dra is forwarded to https://duckrails.gunraidersapi.com/api/photon/authenticate
 Certificate display name: cloudflare-duckrails.gunraidersapi.com
 Registry host: uswccr.ccs.tencentyun.com
 Shared registry namespace: gr-tcr
 API image repository: duckrails-api-golang
 Admin image repository: duckrails-api-admin
 Meta app ID: 28912202281742343
-Photon Realtime app ID: 36bef5d2-63ad-4567-948e-52e966d7f2e9
-Photon Voice app ID: b7c80e26-6a61-45ca-97d9-478af736a6d3
+Photon Realtime app ID: 256ba6f0-c663-4a8f-90f1-bb74b9a49667
+Photon Voice app ID: 61b7a782-2381-4016-b077-a0d1737f95e3
 ```
 
 `duckrails` is the TKE namespace. Keep `gr-tcr` as the existing shared **registry** namespace; these are different objects. Database/account and image names above are the prepared provisioning names. Never select another game's database, namespace or balancer for a Duck Rails write.
@@ -379,16 +379,16 @@ Cloudflare, zone `gunraidersapi.com`:
 2. Proxy status: **Proxied** (orange cloud). The origin certificate from step 8 is only trusted by Cloudflare. A grey-cloud record makes the browser talk to Tencent directly and reject the certificate.
 3. SSL/TLS mode **Full (strict)** for this hostname. If changing the zone-wide mode, first confirm the other hosts in the zone support it; use a hostname-specific configuration rule when needed. Cloudflare speaks HTTPS to the balancer and checks the origin certificate. [Cloudflare Origin CA guidance](https://developers.cloudflare.com/ssl/origin-configuration/origin-ca/).
 
-Photon dashboard: repeat these settings on **both** Duck Rails apps:
+Photon dashboard, for the shared DuckZ apps. Do not point these apps at Duck Rails, and do not change their existing secret.
 
-- Realtime: `36bef5d2-63ad-4567-948e-52e966d7f2e9`.
-- Voice: `b7c80e26-6a61-45ca-97d9-478af736a6d3`.
+- Realtime: `256ba6f0-c663-4a8f-90f1-bb74b9a49667`.
+- Voice: `61b7a782-2381-4016-b077-a0d1737f95e3`.
 
-1. Custom authentication URL: `https://duckrails.gunraidersapi.com/api/photon/authenticate`.
-2. Add a Custom Server authentication provider. Add a dashboard query parameter named `secret` whose value exactly matches `PHOTON_AUTH_PHASE` in `game-api-env`.
-3. Reject authentication when the provider is unavailable, and disable anonymous connections. Allow dashboard changes time to propagate.
-4. The Unity client sends `usr`, `pla`, and its current session `tkn`. Do not put the shared phrase into Unity. The dashboard supplies it server-side.
-5. The Unity assets already contain the two confirmed app IDs above. `PhotonVoiceChat` uses `UsePunAuthValues=true`, so configure this same Custom provider on Voice as well as Realtime. Keep `ENABLE_PHOTON_AUTH=1`.
+1. Leave the custom authentication URL on the DuckZ API. Duck Rails players send `app=dra`, and the DuckZ webhook forwards only those requests to `https://duckrails.gunraidersapi.com/api/photon/authenticate`.
+2. Leave the dashboard query parameter named `secret` as the existing DuckZ phrase. Copy that same phrase into `PHOTON_AUTH_PHASE` in the Duck Rails `game-api-env`. Do not generate a Rails-only phrase, do not commit it, and do not put it in Unity.
+3. Leave **Reject all clients if not available** unchecked. Check **Allow anonymous clients** and leave it checked until old DuckZ builds are gone. Current DuckZ builds do not send `usr`, `pla`, or `tkn`; anonymous clients keep those builds connected. Allow dashboard changes time to propagate.
+4. The Duck Rails client sends `usr`, `pla`, `tkn`, and `app=dra` for Realtime. Voice copies those values, including `app=dra`. Do not put the shared phrase into Unity. The dashboard supplies it server-side.
+5. Keep `ENABLE_PHOTON_AUTH=1` on Duck Rails. DuckZ production must also have `ENABLE_PHOTON_AUTH=1` and the same `PHOTON_AUTH_PHASE` before the provider is turned on.
 
 ## 13. Check
 
@@ -402,7 +402,7 @@ Photon dashboard: repeat these settings on **both** Duck Rails apps:
 ## Updating an existing Duck Rails deployment
 
 1. Do not recreate the database, namespace, Services, certificate, DNS record, or ingress. Record the currently deployed image tags and environment references for rollback.
-2. Update public build settings before building. Keep the existing `REDIS_NAMESPACE` when updating a game. Preserve the existing game/Photon credentials unless deliberately rotating them.
+2. Update public build settings before building. Keep the existing `REDIS_NAMESPACE` when updating a game. Set `PHOTON_AUTH_PHASE` to the DuckZ Photon dashboard secret. Preserve the other game credentials unless deliberately rotating them.
 3. Create or update `game-api-env` in `duckrails`. Updating a Secret alone does not refresh a running container's environment.
 4. Build/push a new API image using section 4. Build the admin image only if its code, baked API URL, or Basic-auth file changed.
 5. Edit the existing API Deployment: select the new image tag, import `game-api-env`, and remove superseded configuration imports after comparing their values with the new build settings. Saving a pod-template change triggers a rollout; if only the Secret changed, explicitly restart the Deployment.

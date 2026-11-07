@@ -247,13 +247,13 @@ func (f *SessionCheckForm) Validate() (errMsgs []string) {
 
 type SessionCheckResponse struct {
 	ResultCode model.PhotonResultCode
-	Message    string `json:",omitempty"`
-	UserId     string `json:",omitempty"`
-	OriginId   string `json:",omitempty"`
-	Platform   string `json:",omitempty"`
-	Nickname   string `json:",omitempty"`
-	AuthCookie string `json:",omitempty"`
-	Data       string `json:",omitempty"`
+	Message    string            `json:",omitempty"`
+	UserId     string            `json:",omitempty"`
+	OriginId   string            `json:",omitempty"`
+	Platform   string            `json:",omitempty"`
+	Nickname   string            `json:",omitempty"`
+	AuthCookie string            `json:",omitempty"`
+	Data       map[string]string `json:",omitempty"`
 }
 
 // SessionCheckHandler godoc
@@ -310,6 +310,7 @@ func (s *sessionHandlerImpl) SessionCheckHandler(c *fiber.Ctx) (err error) {
 		resp.UserId = sess.ComposedID()
 		resp.OriginId = sess.PlayerID
 		resp.Platform = sess.Platform
+		resp.Data = map[string]string{"auth": "dra"}
 	}
 
 	return c.JSON(resp)

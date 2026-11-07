@@ -6,8 +6,8 @@ This repository was copied from Gun Raiders Classic. Use this file for Duck Rail
 
 - Client API base: https://duckrails.gunraidersapi.com/api/v1/
 - Meta app: 28912202281742343 (confirmed by Justin).
-- Photon Realtime app: 36bef5d2-63ad-4567-948e-52e966d7f2e9 (confirmed by Justin).
-- Photon Voice app: b7c80e26-6a61-45ca-97d9-478af736a6d3 (confirmed by Justin).
+- Photon Realtime app: 256ba6f0-c663-4a8f-90f1-bb74b9a49667, shared with DuckZ.
+- Photon Voice app: 61b7a782-2381-4016-b077-a0d1737f95e3, shared with DuckZ.
 - Proposed provisioning names, now used by config/build.env: database duckrails_tencent_global, database account duckrailsuser, TKE namespace duckrails, Redis namespace duckrails.
 - Image repositories: duckrails-api-golang and duckrails-api-admin. Provision them before using the push scripts.
 - APP_VERSION is 0.2.7, matching the current Unity client. Build-hash checking remains disabled as in the template.
@@ -15,9 +15,9 @@ This repository was copied from Gun Raiders Classic. Use this file for Duck Rail
 ## Before first deployment
 
 1. Provision the separate database/account and import api/sql/structure_classic.sql ONLY into Duck Rails. Despite its inherited filename, the script now creates/selects duckrails_tencent_global. No SQL has been executed. Retain the single shared database instance and existing Redis instance; verify their copied private addresses in config/build.env.
-2. Supply this game's DB_PASSWORD, OCULUS_APPSECRET, PHOTON_AUTH_PHASE and the shared Redis account's REDIS_PASSWORD through the duckrails namespace's game-api-env Secret. The copied ignored runtime.env and local .env files have not been read, reused, or changed; replace any copied credentials with the correct values before use. Do not run the local API with Classic's copied .env.
+2. Supply this game's DB_PASSWORD, OCULUS_APPSECRET, and the shared Redis account's REDIS_PASSWORD through the duckrails namespace's game-api-env Secret. Set `PHOTON_AUTH_PHASE` to the secret already configured on the DuckZ Photon dashboard. Do not generate a Rails-only phrase, do not commit it, and do not put it in Unity. The copied ignored runtime.env and local .env files have not been read, reused, or changed; replace any copied credentials with the correct values before use. Do not run the local API with Classic's copied .env.
 3. For Editor login, add organization-scoped IDs to META_EDITOR_USER_IDS. The Unity Editor logs `[SignIn] Editor Meta organization-scoped user ID: ...`. Configure the Meta Platform Editor test account for the confirmed app. Empty allowlist disables Editor access; no bypass phrase is needed.
-4. Configure Custom authentication on BOTH Photon apps with URL https://duckrails.gunraidersapi.com/api/photon/authenticate and a dashboard query parameter named secret equal to PHOTON_AUTH_PHASE. Disable anonymous clients for a secured deployment. The Unity client supplies usr, pla and tkn; the server-only secret must never be put into Unity. The Voice client copies PUN authentication, so both apps need the same backend provider configuration.
+4. Leave custom authentication on the shared DuckZ Realtime and Voice apps pointed at the DuckZ webhook, with the existing dashboard secret. Duck Rails sends `usr`, `pla`, `tkn`, and `app=dra`; the DuckZ webhook forwards only `app=dra` to `https://duckrails.gunraidersapi.com/api/photon/authenticate`. Voice copies those same values. Leave **Reject all clients if not available** unchecked and **Allow anonymous clients** checked until old DuckZ builds are gone. The server-only secret must never be put into Unity.
 5. Set up the duckrails.gunraidersapi.com DNS/TLS/load balancer and deploy the API. Configure health checks using the existing deployment guide. Preserve /api/v1 routes and the unversioned /api/photon/authenticate callback.
 6. The copied push shortcuts now target this repository, and push scripts use Duck Rails image repositories. Their inherited filenames still mention GRC. Admin API URLs now point to Duck Rails. Rotate/configure admin credentials separately before publishing the admin site; this work did not change authentication secrets.
 
