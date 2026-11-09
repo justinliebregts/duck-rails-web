@@ -18,7 +18,7 @@ func TestRailsEconomyRoutesAndAuthenticationScope(t *testing.T) {
 	api.Get("/public-probe", func(c *fiber.Ctx) error { return c.SendStatus(204) })
 	for _, route := range []struct{ method, path string }{
 		{"GET", "/wallet"}, {"GET", "/store"}, {"POST", "/store/buy"},
-		{"POST", "/coins/deposit"}, {"POST", "/iap/grant"}, {"POST", "/loadout"},
+		{"POST", "/coins/deposit"}, {"POST", "/coins/deposit/scaled"}, {"POST", "/iap/grant"}, {"POST", "/loadout"},
 		{"GET", "/admin/wallet/test-player"}, {"POST", "/admin/coins/adjust"},
 		{"GET", "/admin/transactions/test-player"}, {"GET", "/admin/check"},
 	} {

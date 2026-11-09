@@ -26,3 +26,21 @@ If the original create_duckz_economy.sql was already applied, run api/sql/rename
 
 The rename and matching API deployment have not been performed by this source change.
 Validation: go test -p 2 ./model/duckz ./repository/duckz ./service/duckz ./router ./router/duckz passed after the rename. The SQL migration has not been executed against MySQL by this change.
+
+## November 8 resource scaling update
+
+The matching Unity client uses `POST /api/v1/coins/deposit/scaled` with `bars: 1`,
+`gold_denominator` (10–100) and `gold_index` (1–10000). The server credits
+floor(index * 100 / denominator) - floor((index - 1) * 100 / denominator), preserving
+the existing integer wallet, cap, hourly limit and request-ID deduplication. Current
+crew scaling yields denominators 10, 16, 22, 28, 34, 40, 46 and 52. The client retains
+the departure crew and numbers only eligible deposits; safe rewards continue after
+eligible shop sales at successful finish. Existing client-authorized trust remains;
+the API does not independently simulate Photon loot or roster state.
+
+Deploy this API before/with the new client. No SQL migration is needed. The separate
+endpoint prevents an older API from interpreting scaled bars as legacy 100-coin bars;
+the client retains queued rewards on 404. Legacy requests and queued deposits keep
+the old endpoint contract. Service/repository/router tests pass, including exact
+four-block budgets, retries and invalid scaling inputs. No publication or production
+rollout was performed for this change; live client/API verification remains pending.

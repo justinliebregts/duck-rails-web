@@ -112,6 +112,10 @@ func (h *economyHandlerImpl) Deposit(c *fiber.Ctx) error {
 		resp.AddErrorAsMessages(err)
 		return c.Status(resp.Status).JSON(resp)
 	}
+	if c.Path() == "/api/v1/coins/deposit/scaled" && (req.GoldDenominator == 0 || req.GoldIndex == 0) {
+		resp := myMDL.Default400Resp.Copy()
+		return c.Status(resp.Status).JSON(resp)
+	}
 	ses := myMW.RetrieveSession(c)
 	result, err := h.svc.Deposit(ses.ComposedID(), req, myMDL.CurrentTimestamp())
 	if err != nil {

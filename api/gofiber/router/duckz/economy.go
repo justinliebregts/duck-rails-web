@@ -30,6 +30,7 @@ func SetupDuckzEconomyRoutes(rtr fiber.Router, oculusSvc oculus.Client) {
 	rtr.Get("/wallet", myMW.CustomOAuth2Protected, hdl.Wallet)
 	rtr.Get("/store", myMW.CustomOAuth2Protected, hdl.Store)
 	rtr.Post("/coins/deposit", myMW.CustomOAuth2Protected, myMW.NonceRepeatCheck(), hdl.Deposit)
+	rtr.Post("/coins/deposit/scaled", myMW.CustomOAuth2Protected, myMW.NonceRepeatCheck(), hdl.Deposit)
 	rtr.Post("/store/buy", myMW.CustomOAuth2Protected, myMW.NonceRepeatCheck(), hdl.Buy)
 	rtr.Post("/iap/grant", myMW.CustomOAuth2Protected, myMW.NonceRepeatCheck(), hdl.GrantIAP)
 	rtr.Post("/loadout", myMW.CustomOAuth2Protected, myMW.NonceRepeatCheck(), hdl.SaveLoadout)

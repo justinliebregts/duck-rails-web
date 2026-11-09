@@ -2,6 +2,7 @@ package duckz
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -256,6 +257,40 @@ func TestDepositCreditsServerComputedCoins(t *testing.T) {
 	res := mustDeposit(t, svc, "d1", 3, time.Now())
 	if res.Credited != 300 || res.Coins != 300 {
 		t.Fatalf("got credited=%d coins=%d, want 300/300", res.Credited, res.Coins)
+	}
+}
+
+func TestScaledGoldBudgetAndReplay(t *testing.T) {
+	for _, denominator := range []int{10, 16, 22, 28, 34, 40, 46, 52} {
+		_, _, svc := newTestService()
+		now := time.Now()
+		for index := 1; index <= 4*denominator; index++ {
+			req := DepositRequest{RequestID: fmt.Sprintf("scaled-%d", index), Bars: 1, GoldDenominator: denominator, GoldIndex: index}
+			res, err := svc.Deposit(player, req, now)
+			if err != nil || res.Coins != index*100/denominator {
+				t.Fatalf("denominator=%d index=%d result=%+v error=%v", denominator, index, res, err)
+			}
+			replay, err := svc.Deposit(player, req, now)
+			if err != nil || !replay.Idempotent || replay.Coins != res.Coins {
+				t.Fatalf("replay changed credit: %+v %v", replay, err)
+			}
+		}
+	}
+}
+
+func TestScaledGoldRejectsMalformedAmounts(t *testing.T) {
+	_, _, svc := newTestService()
+	for _, req := range []DepositRequest{
+		{Bars: 1, GoldDenominator: 0, GoldIndex: 1},
+		{Bars: 1, GoldDenominator: 52, GoldIndex: 0},
+		{Bars: 2, GoldDenominator: 52, GoldIndex: 1},
+		{Bars: 1, GoldDenominator: 101, GoldIndex: 1},
+		{Bars: 1, GoldDenominator: 52, GoldIndex: 10001},
+	} {
+		req.RequestID = "invalid-scaled"
+		if _, err := svc.Deposit(player, req, time.Now()); !errors.Is(err, myERR.ErrDuckzInvalidBars) {
+			t.Fatalf("request=%+v error=%v", req, err)
+		}
 	}
 }
 

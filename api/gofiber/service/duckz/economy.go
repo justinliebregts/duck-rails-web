@@ -41,8 +41,10 @@ type AdminWalletResult struct {
 }
 
 type DepositRequest struct {
-	RequestID string `json:"request_id"`
-	Bars      int    `json:"bars"`
+	RequestID       string `json:"request_id"`
+	Bars            int    `json:"bars"`
+	GoldDenominator int    `json:"gold_denominator"`
+	GoldIndex       int    `json:"gold_index"`
 }
 
 type BuyRequest struct {
@@ -199,12 +201,20 @@ func (s *economyServiceImpl) Deposit(playerID string, req DepositRequest, now ti
 	if req.Bars <= 0 || req.Bars > s.eco.MaxBarsPerDeposit {
 		return nil, myERR.ErrDuckzInvalidBars
 	}
+	if (req.GoldDenominator != 0 || req.GoldIndex != 0) &&
+		(req.Bars != 1 || req.GoldDenominator < 10 || req.GoldDenominator > 100 || req.GoldIndex < 1 || req.GoldIndex > 10000) {
+		return nil, myERR.ErrDuckzInvalidBars
+	}
 
 	if res, err := s.idempotentDeposit(playerID, req.RequestID); res != nil || err != nil {
 		return res, err
 	}
 
 	coins := req.Bars * s.eco.CoinsPerBar
+	if req.GoldDenominator > 0 {
+		// One hundred coins per block, with rational carry across eligible bars.
+		coins = req.GoldIndex*100/req.GoldDenominator - (req.GoldIndex-1)*100/req.GoldDenominator
+	}
 	result := &DepositResult{Credited: coins}
 
 	err := s.repo.WithTx(playerID, func(tx dzREPO.EconomyTx) error {
