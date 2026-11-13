@@ -75,7 +75,7 @@ type LoadoutResult struct {
 	SkinKey string `json:"skin_key"`
 }
 
-// StoreListResult is the coin store the server loaded from duckz_economy.json.
+// StoreListResult is the coin store the server loaded from duckrails_economy.json.
 type StoreListResult struct {
 	Items []cfgMDL.DuckzStoreItem `json:"items"`
 }
@@ -113,7 +113,7 @@ type EconomyService interface {
 	AdminWallet(playerID string) (*AdminWalletResult, error)
 	AdminAdjust(adminID string, req AdminAdjustRequest) (*AdminAdjustResult, error)
 	AdminTransactions(playerID string) ([]dzMDL.AdminTransaction, error)
-	// Store returns coin prices from duckz_economy.json. That file is the only price list. IAP-only items are left out.
+	// Store returns coin prices from duckrails_economy.json. That file is the only price list. IAP-only items are left out.
 	Store() StoreListResult
 }
 

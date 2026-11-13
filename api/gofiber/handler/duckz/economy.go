@@ -83,7 +83,7 @@ func (h *economyHandlerImpl) Wallet(c *fiber.Ctx) error {
 }
 
 // Store godoc
-// @Summary Duckz coin store prices from duckz_economy.json
+// @Summary Duckz coin store prices from duckrails_economy.json
 // @Tags duckz
 // @Produce json
 // @Security ApiKeyNonStandardAuth

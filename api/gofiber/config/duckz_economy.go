@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	DuckzEconomyJsonPath = "config/json/duckz_economy.json"
+	DuckzEconomyJsonPath = "config/json/duckrails_economy.json"
 )
 
 func LoadDuckzEconomyJson() (eco cfgMDL.DuckzEconomy, err error) {

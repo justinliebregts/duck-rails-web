@@ -10,7 +10,7 @@ import (
 
 func TestRailsEconomyRoutesAndAuthenticationScope(t *testing.T) {
 	previous := config.DuckzEconomyJsonPath
-	config.DuckzEconomyJsonPath = "../../config/json/duckz_economy.json"
+	config.DuckzEconomyJsonPath = "../../config/json/duckrails_economy.json"
 	t.Cleanup(func() { config.DuckzEconomyJsonPath = previous })
 	app := fiber.New()
 	api := app.Group("/api/v1")

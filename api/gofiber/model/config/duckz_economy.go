@@ -1,6 +1,6 @@
 package config
 
-// DuckzEconomy mirrors config/json/duckz_economy.json. Keys and prices must match the
+// DuckzEconomy mirrors config/json/duckrails_economy.json. Keys and prices must match the
 // Duckz client StoreCatalog; the server copy is authoritative for prices.
 type DuckzEconomy struct {
 	CoinsPerBar       int                `json:"coins_per_bar"`
