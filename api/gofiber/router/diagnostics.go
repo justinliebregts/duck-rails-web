@@ -17,7 +17,7 @@ import (
 // Diagnostic reports are separate from player moderation reports. Never expose the inbox to game clients.
 type diagnosticRecord struct {
 	ID         string    `json:"id" gorm:"primaryKey;size:32"`
-	Reporter   string    `json:"-" gorm:"size:128;index"`
+	Reporter   string    `json:"reporter,omitempty" gorm:"size:128;index"`
 	CreatedAt  time.Time `json:"created"`
 	Category   string    `json:"category" gorm:"size:100"`
 	Summary    string    `json:"summary" gorm:"size:600"`
@@ -130,7 +130,7 @@ func listDiagnostics(c *fiber.Ctx) error {
 	if offset < 0 {
 		return fiber.NewError(400, "Invalid offset")
 	}
-	if query.Omit("payload", "reporter").Order("created_at DESC, id DESC").Limit(100).Offset(offset).Find(&records).Error != nil {
+	if query.Omit("payload").Order("created_at DESC, id DESC").Limit(100).Offset(offset).Find(&records).Error != nil {
 		return fiber.NewError(503, "Could not read reports")
 	}
 	return c.JSON(fiber.Map{"success": true, "data": fiber.Map{"reports": records, "total": count}})
