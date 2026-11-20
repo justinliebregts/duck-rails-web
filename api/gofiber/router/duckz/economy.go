@@ -15,6 +15,7 @@ import (
 
 // SetupDuckzEconomyRoutes registers the reused economy under the Rails API root.
 func SetupDuckzEconomyRoutes(rtr fiber.Router, oculusSvc oculus.Client) {
+	setupBoard(rtr)
 	eco, err := myCFG.LoadDuckzEconomyJson()
 	if err != nil {
 		log.Fatalf("duckz economy config: %v", err)
