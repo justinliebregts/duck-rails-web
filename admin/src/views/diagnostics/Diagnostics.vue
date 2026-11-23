@@ -12,7 +12,7 @@
       <p v-if="notice" role="status" class="alert alert-success mt-3">{{ notice }}</p>
       <div class="table-responsive mt-3"><table class="table table-hover">
         <thead><tr><th>Report ID</th><th>Created</th><th>Summary</th><th>Category</th><th>Platform</th><th>Status</th><th></th></tr></thead>
-        <tbody><tr v-for="report in reports" :key="report.id"><td><code class="report-id">{{ report.id }}</code><button class="btn btn-sm btn-outline-secondary mt-1" :aria-label="'Copy report ID ' + report.id" @click="copyId(report.id)">Copy ID</button></td><td>{{ date(report.created) }}</td><td class="summary">{{ report.summary }}</td><td>{{ report.category }}</td><td>{{ report.platform }}</td><td>{{ report.status }}</td><td><button class="btn btn-sm btn-outline-primary" :disabled="detailLoading || saving" @click="open(report.id)">View</button></td></tr></tbody>
+        <tbody v-for="group in incidents" :key="group.id"><tr><th colspan="7"><span class="level" :class="group.level.toLowerCase()">{{ group.level }}</span> {{ group.category }} · {{ group.build }} <span v-if="group.runs">· {{ group.runs }} distinct runs on this page</span></th></tr><tr v-for="report in group.reports" :key="report.id"><td><code class="report-id">{{ report.id }}</code><button class="btn btn-sm btn-outline-secondary mt-1" :aria-label="'Copy report ID ' + report.id" @click="copyId(report.id)">Copy ID</button></td><td>{{ date(report.created) }}</td><td class="summary"><strong>{{ report.peer }}</strong> {{ report.message }}</td><td>{{ report.category }}</td><td>{{ report.platform }}</td><td>{{ report.status }}</td><td><button class="btn btn-sm btn-outline-primary" :disabled="detailLoading || saving" @click="open(report.id)">View</button></td></tr></tbody>
       </table></div>
       <p v-if="!loading && !error && !reports.length">No {{ status === 'all' ? '' : status }} reports.</p>
       <div class="d-flex controls"><button class="btn btn-outline-secondary" :disabled="offset === 0 || loading || saving" @click="offset -= 100; load()">Previous</button><span>Page {{ Math.floor(offset / 100) + 1 }}</span><button class="btn btn-outline-secondary" :disabled="offset + 100 >= total || loading || saving" @click="offset += 100; load()">Next</button></div>
@@ -43,7 +43,24 @@
 export default {
   name: 'Diagnostics',
   data: () => ({ status: 'open', offset: 0, total: 0, reports: [], selected: null, payload: null, payloadError: false, resolution: '', loading: false, detailLoading: false, saving: false, error: '', notice: '' }),
-  computed: { endpoint() { return `${this.$gstate.defaultUrl}/diagnostics/admin/reports` } },
+  computed: {
+    incidents() {
+      const groups = new Map()
+      const runs = new Map()
+      for (const report of this.reports) {
+        const match = /^\[(Critical|High|Warning)\|([a-f0-9]{32})\|([a-f0-9]{32})\|((?:master|client) \d+)\] (.*)$/s.exec(report.summary)
+        const id = match ? match[2] : report.id
+        const issue = JSON.stringify([report.category, report.build])
+        if (match) {
+          if (!runs.has(issue)) runs.set(issue, new Set())
+          runs.get(issue).add(match[3])
+        }
+        if (!groups.has(id)) groups.set(id, { id, issue, category: report.category, build: report.build, level: match ? match[1] : 'Untriaged', reports: [] })
+        groups.get(id).reports.push({ ...report, peer: match ? match[4] : '', message: match ? match[5] : report.summary })
+      }
+      return Array.from(groups.values(), group => ({ ...group, runs: runs.has(group.issue) ? runs.get(group.issue).size : 0 }))
+    },
+    endpoint() { return `${this.$gstate.defaultUrl}/diagnostics/admin/reports` } },
   mounted() { this.load() },
   methods: {
     async copyId(id) {
@@ -96,6 +113,7 @@ export default {
 }
 </script>
 <style scoped>
+.level { display: inline-block; padding: 2px 7px; border-radius: 4px; background: #e9ecef; color: #212529; } .critical { background: #a81c30; color: white; } .high { background: #ab4300; color: white; } .warning { background: #ffda67; }
 .controls { gap: 12px; flex-wrap: wrap; align-items: center; }
 .summary { overflow-wrap: anywhere; max-width: 500px; }
 .report-id { display: block; width: 18ch; overflow-wrap: anywhere; user-select: all; }

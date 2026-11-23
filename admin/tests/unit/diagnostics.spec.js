@@ -43,3 +43,15 @@ test('login validates token before storing and does not leak server errors', asy
   await wrapper.vm.login(); expect(auth.tmpLoginForever).toHaveBeenCalledWith('Bearer test-token')
   expect(router.replace).toHaveBeenCalledWith('/diagnostics'); expect(wrapper.vm.token).toBe('')
 })
+
+test('groups master and client evidence while counting separate runs of the same build', async () => {
+  const { wrapper } = setup(); await tick()
+  const report = (id, incident, run, peer) => ({ id, category: 'loading-stall', build: 'quest-build',
+    summary: '[High|' + incident.repeat(32) + '|' + run.repeat(32) + '|' + peer + '] Loading stalled' })
+  await wrapper.setData({ reports: [report('1', 'a', 'b', 'master 1'), report('2', 'a', 'b', 'client 2'),
+    report('3', 'c', 'd', 'client 3'), { id: 'legacy', summary: 'Manual report' }] })
+  expect(wrapper.vm.incidents.map(g => [g.level, g.reports.length, g.runs])).toEqual([
+    ['High', 2, 2], ['High', 1, 2], ['Untriaged', 1, 0]])
+  expect(wrapper.text()).toContain('master 1')
+  expect(wrapper.text()).toContain('client 2')
+})
