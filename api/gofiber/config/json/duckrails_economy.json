@@ -5,7 +5,7 @@
   "store_items": [
     {
       "key": "weapon_nail_bat",
-      "price": 275,
+      "price": 500,
       "durable": false
     },
     {
@@ -30,7 +30,7 @@
     },
     {
       "key": "item_night_vision_goggles",
-      "price": 300,
+      "price": 350,
       "durable": false
     },
     {
