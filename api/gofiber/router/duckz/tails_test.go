@@ -9,6 +9,20 @@ import (
 	"time"
 )
 
+func TestBoardRunID(t *testing.T) {
+	id := strings.Repeat("a", 32)
+	for _, raw := range []string{id, "run-" + id} {
+		if got, ok := boardRunID(raw); !ok || got != id {
+			t.Fatalf("unexpected canonical ID for %q: %q", raw, got)
+		}
+	}
+	for _, raw := range []string{"run-", "run-run-" + id, "return-" + id} {
+		if _, ok := boardRunID(raw); ok {
+			t.Fatalf("accepted invalid ID %q", raw)
+		}
+	}
+}
+
 func TestBoardWeek(t *testing.T) {
 	for date, want := range map[string]string{"2026-11-22T23:59:59Z": "2026-11-16", "2026-11-23T00:00:00Z": "2026-11-23", "2027-01-01T12:00:00Z": "2026-12-28"} {
 		at, _ := time.Parse(time.RFC3339, date)

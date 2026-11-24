@@ -43,6 +43,11 @@ type boardSnapshot struct {
 var runFormat = regexp.MustCompile("^[0-9a-f]{32}$")
 var dimension = regexp.MustCompile("^[a-z0-9_-]{1,48}$")
 
+func boardRunID(raw string) (string, bool) {
+	id := strings.TrimPrefix(raw, "run-")
+	return id, runFormat.MatchString(id)
+}
+
 func enemyKind(s string) bool {
 	switch s {
 	case "minion", "smasher", "bomber", "hook", "spider":
@@ -131,7 +136,11 @@ var errBoardSize = errors.New("too many counters")
 
 func reportBoard(c *fiber.Ctx) error {
 	var r boardReport
-	if len(c.Body()) > 32768 || c.BodyParser(&r) != nil || !runFormat.MatchString(r.Run) || len(r.Metrics) == 0 || len(r.Metrics) > 256 {
+	if len(c.Body()) > 32768 || c.BodyParser(&r) != nil || len(r.Metrics) == 0 || len(r.Metrics) > 256 {
+		return c.SendStatus(400)
+	}
+	var validRun bool
+	if r.Run, validRun = boardRunID(r.Run); !validRun {
 		return c.SendStatus(400)
 	}
 	if strings.ContainsAny(r.Name, "<>") || strings.IndexFunc(r.Name, unicode.IsControl) >= 0 || utf8.RuneCountInString(r.Name) > 80 {
